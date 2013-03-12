@@ -25,14 +25,15 @@
         target-class (built-class builder-class)
         meth-attrs (seq (method-attributes builder-class))
         instance (gensym)
-        method-signature (fn [[methodName attrName]]
-                           (let [this (gensym)
-                                 value (gensym)]
-                             `(~(symbol methodName) [~this ~value] (do (assoc ~instance ~attrName ~value) ~this))))
-        method-signatures (map method-signature meth-attrs)]
-    `(let [~instance (~(symbol (str 'map-> (. target-class getSimpleName))) {})] 
+        set-method (fn [[methodName attrName]]
+                     (let [this (gensym)
+                           value (gensym)]
+                       `(~(symbol methodName) [~this ~value] (do (def ~instance (assoc ~instance ~attrName ~value)) ~this))))
+        set-methods (map set-method meth-attrs)]
+    `(do 
+       (def ~instance (~(symbol (str 'map-> (. target-class getSimpleName))) {})) 
        (reify ~builder-class-symbol
-         ~@method-signatures
+         ~@set-methods
          (build [this] ~instance)))))
 
 (defmacro defdom [& names]
@@ -45,14 +46,28 @@
     (let [builder-classes (map eval names)
           classes (map built-class builder-classes)
           defrecord-forms (map defrecord-form classes)]
-      (cons 'do defrecord-forms))))
+      `(do ~@defrecord-forms))))
 
+(defmacro build [builder [& methodCalls]]
+  (letfn [(setter [symb]
+            (let [string (str symb)]
+              (symbol (str "set" (str/capitalize (first string)) (str/join "" (rest string))))))
+           (to-call [[attribute value]] 
+            `(. ~builder ~(setter attribute) ~value))]
+    `(do
+       ~@(map to-call (partition 2 methodCalls))
+       (. ~builder build))))
+    
 (defdom
   jdata.examples.PersonBuilder
   jdata.examples.NameBuilder
   jdata.examples.AddressBuilder)
 
 (defn -main []
+  (println (macroexpand-1 '(defdom
+                             jdata.examples.PersonBuilder
+                             jdata.examples.NameBuilder
+                             jdata.examples.AddressBuilder)))
   (println (map->Person {}))
   (println (macroexpand-1 '(builder jdata.examples.PersonBuilder)))
   (let [person (new Person
@@ -60,8 +75,12 @@
                  (new Address "Nonnegata" "21" "0656" "Oslo"))]
     (println person))
   (println (macroexpand-1 '(defbuilder jdata.examples.NameBuilder)))
-  (let [bldr (defbuilder jdata.examples.NameBuilder)]
-    (println bldr)
-    (println (. bldr setMiddleName "Kjetil"))
-    (println (. (. bldr setMiddleName "Kjetil") build))))
+  (let [bldr (defbuilder jdata.examples.NameBuilder)
+        kjetil (build bldr
+                 [firstName "Kjetil"
+                  middleName "Jamne"
+                  lastName "Valstadsve"])]
+    (println kjetil)
+    (println (type kjetil))
+    (println (get kjetil 'firstName))))
 (-main)
