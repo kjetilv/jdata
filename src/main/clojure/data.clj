@@ -23,18 +23,27 @@
 (defmacro defbuilder [builder-class-symbol]
   (let [builder-class (eval builder-class-symbol)
         target-class (built-class builder-class)
-        meth-attrs (seq (method-attributes builder-class))
+        target-class-symbol (symbol (. target-class getName))
+        set-meth-attrs (seq (method-attributes builder-class))
+        get-meth-attrs (seq (method-attributes target-class))
         instance (gensym)
         set-method (fn [[methodName attrName]]
                      (let [this (gensym)
                            value (gensym)]
                        `(~(symbol methodName) [~this ~value] (do (def ~instance (assoc ~instance ~attrName ~value)) ~this))))
-        set-methods (map set-method meth-attrs)]
+        get-method (fn [[methodName attrName]]
+                     (let [this (gensym)]
+                       `(~(symbol methodName) [~this] (get ~instance ~attrName))))
+        set-methods (map set-method set-meth-attrs)
+        get-methods (map get-method get-meth-attrs)]
     `(do 
        (def ~instance (~(symbol (str 'map-> (. target-class getSimpleName))) {})) 
        (reify ~builder-class-symbol
          ~@set-methods
-         (build [this] ~instance)))))
+         (toString [this] (str ~instance))
+         (build [this] (reify ~target-class-symbol 
+                         ~@get-methods
+                         (toString [this] (str ~instance))))))))
 
 (defmacro defdom [& names]
   (letfn [(declared-fields-vector [intf]
@@ -49,9 +58,9 @@
       `(do ~@defrecord-forms))))
 
 (defmacro build [builder [& methodCalls]]
-  (letfn [(setter [symb]
-            (let [string (str symb)]
-              (symbol (str "set" (str/capitalize (first string)) (str/join "" (rest string))))))
+  (letfn [(setter [smb]
+            (let [strng (str smb)]
+              (symbol (str "set" (str/capitalize (first strng)) (str/join "" (rest strng))))))
            (to-call [[attribute value]] 
             `(. ~builder ~(setter attribute) ~value))]
     `(do
@@ -82,5 +91,5 @@
                   lastName "Valstadsve"])]
     (println kjetil)
     (println (type kjetil))
-    (println (get kjetil 'firstName))))
+    (println (. kjetil getFirstName))))
 (-main)
