@@ -67,7 +67,7 @@
         get-methods (map get-method get-meth-attrs)
         mapctr (symbol (str "map->" (. target-class getSimpleName)))]
     `(do 
-       (def ~instance (~mapctr {})) 
+       (def ~instance (~mapctr {}))
        (reify ~builder-class-symbol
          ~@set-methods
          (toString [this] (. ~instance toString))
