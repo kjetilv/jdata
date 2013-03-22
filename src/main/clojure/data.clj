@@ -66,7 +66,7 @@
                           (~(keyword attrName) ~instance))))
         get-methods (map get-method get-meth-attrs)
         mapctr (symbol (str "map->" (. target-class getSimpleName)))]
-    `(do 
+    `(do
        (def ~instance (~mapctr {}))
        (reify ~builder-class-symbol
          ~@set-methods
@@ -135,6 +135,14 @@
   jdata.examples.NameBuilder
   jdata.examples.AddressBuilder)
 
+(defn name-builder []
+  (defn new-builder [inst]
+    (reify jdata.examples.NameBuilder
+      (setFirstName [this value] (new-builder (assoc inst :firstName value)))
+      (setMiddleName [this value] (new-builder (assoc inst :middleName value)))
+      (setLastName [this value] (new-builder (assoc inst :lastName value)))
+      (build [this] (type-instance jdata.examples.Name inst)))))
+
 (defn -main []
   (println (macroexpand-1 '(defdom
                              jdata.examples.PersonBuilder
@@ -154,5 +162,10 @@
     (println (. kjetil toString))
     (println (type kjetil))
     (println (. kjetil getFirstName))
-    (println (:firstName kjetil))))
+    (println (:firstName kjetil))
+    (let [nb ((name-builder) {})
+          n1 (. (. (. nb setFirstName "Kjetil") setLastName "V") build)
+          n2 (. (. (. nb setFirstName "Kjetil") setLastName "V") build)]
+      (println (type n1) (type n2)))))
+  
 (-main)
