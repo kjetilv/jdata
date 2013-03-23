@@ -1,5 +1,7 @@
 package jdata.examples;
 
+import jdata.core.Builder;
+
 public interface AddressBuilder extends Builder<Address> {
     
     AddressBuilder getStreetName(String streetName);

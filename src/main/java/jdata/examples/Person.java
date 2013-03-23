@@ -1,6 +1,8 @@
 package jdata.examples;
 
-public interface Person {
+import jdata.core.Access;
+
+public interface Person extends Access {
     
     Name getName();
     

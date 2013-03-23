@@ -85,6 +85,7 @@
         get-methods (map get-method get-meth-attrs)]
     `(reify ~type-name 
        ~@get-methods
+       (get [this] ~type-instance)
        (toString [this] (. ~type-instance toString)))))
 
 (defmacro type-builder [builder-class-symbol]
@@ -165,7 +166,10 @@
     (println (:firstName kjetil))
     (let [nb ((name-builder) {})
           n1 (. (. (. nb setFirstName "Kjetil") setLastName "V") build)
-          n2 (. (. (. nb setFirstName "Kjetil") setLastName "V") build)]
-      (println (type n1) (type n2)))))
+          n2 (. (. (. nb setFirstName "Thomas") setLastName "J") build)]
+      (println (type n1))
+      (println (type n2))
+      (println (. n1 getFirstName))
+      (println (. n1 get)))))
   
 (-main)

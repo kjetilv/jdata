@@ -1,6 +1,8 @@
 package jdata.examples;
 
-public interface Address {
+import jdata.core.Access;
+
+public interface Address extends Access {
     
     String getStreetName();
     
