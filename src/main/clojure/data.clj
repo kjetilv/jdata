@@ -79,15 +79,6 @@
                  (build [this] (type-instance ~target-class-symbol (~mapctr ~inst)))))]
        (~builder {}))))
 
-(defn name-builder []
-  (letfn [(builder [inst]
-            (reify jdata.examples.NameBuilder
-              (setFirstName [this value] (builder (assoc inst :firstName value)))
-              (setMiddleName [this value] (builder (assoc inst :middleName value)))
-              (setLastName [this value] (builder (assoc inst :lastName value)))
-              (build [this] (type-instance jdata.examples.Name (map->Name inst)))))]
-    (builder {})))
-
 (defn -main []
   (println (macroexpand-1 '(defdom
                              jdata.examples.PersonBuilder
