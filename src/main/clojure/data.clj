@@ -20,61 +20,6 @@
           attribute-names (map normalize accessed-names)]
       (zipmap method-names attribute-names))))
 
-;(defmacro reifier-body [builder-class target-class instance]
-;  (let [->instance (symbol (str "map->" (. target-class getSimpleName)))
-;        set-method (fn [[methodName attrName]]
-;                     `(~(symbol methodName) [this value] 
-;                        (reifier-body ~builder-class ~target-class (assoc ~instance ~(keyword attrName) ~value))))
-;        get-method (fn [[methodName attrName]]
-;                     `(~(symbol methodName) [this]
-;                        (~(keyword attrName) ~instance)))
-;        set-methods (map set-method set-meth-attrs)
-;        get-methods (map get-method get-meth-attrs)]
-;    `(reify ~builder-class
-;       ~@set-methods
-;       (toString [this] (str ~instance)) 
-;       (build [this] (reify target-class
-;                       ~@get-methods
-;                       (toString [this] (str ~instance)))))))
-;
-;(defmacro defbuilder [builder-class-symbol]
-;  (let [builder-class (eval builder-class-symbol)
-;        target-class (built-class builder-class)
-;        target-class-symbol (symbol (. target-class getName))
-;        instance (gensym)
-;        ]
-;    (refifier-body builder-class target-class nil)))
-
-(defmacro defbuilder [builder-class-symbol]
-  (let [builder-class (eval builder-class-symbol)
-        target-class (built-class builder-class)
-        target-class-symbol (symbol (. target-class getName))
-        set-meth-attrs (seq (method-attributes builder-class))
-        instance (gensym)
-        set-method (fn [[methodName attrName]]
-                     (let [this (gensym) 
-                           value (gensym)]
-                       `(~(symbol methodName) [~this ~value] 
-                          (do 
-                            (def ~instance (assoc ~instance ~(keyword attrName) ~value))
-                            ~this))))
-        set-methods (map set-method set-meth-attrs)
-        get-meth-attrs (seq (method-attributes target-class))
-        get-method (fn [[methodName attrName]]
-                     (let [this (gensym)]
-                       `(~(symbol methodName) [~this]
-                          (~(keyword attrName) ~instance))))
-        get-methods (map get-method get-meth-attrs)
-        mapctr (symbol (str "map->" (. target-class getSimpleName)))]
-    `(do
-       (def ~instance (~mapctr {}))
-       (reify ~builder-class-symbol
-         ~@set-methods
-         (toString [this] (. ~instance toString))
-         (build [this] (reify ~target-class-symbol 
-                         ~@get-methods
-                         (toString [this] (. ~instance toString))))))))
-
 (defmacro type-instance [type-name type-instance]
   (let [target-class (eval type-name)
         get-meth-attrs (seq (method-attributes target-class))
@@ -85,8 +30,7 @@
         get-methods (map get-method get-meth-attrs)]
     `(reify ~type-name 
        ~@get-methods
-       (get [this] ~type-instance)
-       (toString [this] (. ~type-instance toString)))))
+       (get [this] ~type-instance))))
 
 (defmacro defdom [& names]
   (letfn [(declared-fields-vector [intf]
@@ -149,13 +93,11 @@
                              jdata.examples.PersonBuilder
                              jdata.examples.NameBuilder
                              jdata.examples.AddressBuilder)))
-;  (println (map->Person {}))
-;  (println (macroexpand-1 '(builder jdata.examples.PersonBuilder)))
-;  (let [person (new Person
-;                 (new Name "Kjetil" nil "Valstadsve")
-;                 (new Address "Nonnegata" "21" "0656" "Oslo"))]
-;    (println person))
-  (println (macroexpand-1 '(type-builder jdata.examples.NameBuilder)))
+  (println (map->Person {}))
+  (let [person (new Person
+                 (new Name "Kjetil" nil "Valstadsve")
+                 (new Address "Nonnegata" "21" "0656" "Oslo"))]
+    (println person))
   (let [kjetil (build (type-builder jdata.examples.NameBuilder)
                  [firstName "Kjetil"
                   middleName "Jamne"
@@ -167,6 +109,8 @@
     (let [nb (type-builder jdata.examples.NameBuilder) 
           n1 (. (. (. nb setFirstName "Kjetil") setLastName "V") build)
           n2 (. (. (. nb setFirstName "Thomas") setLastName "J") build)]
+      (println n1)
+      (println n2)
       (println (type n1))
       (println (type n2))
       (println (. n1 getFirstName))
