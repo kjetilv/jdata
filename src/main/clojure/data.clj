@@ -137,12 +137,13 @@
          (build [this] (type-instance ~target-class-symbol ~instance))))))
 
 (defn name-builder []
-  (defn new-builder [inst]
-    (reify jdata.examples.NameBuilder
-      (setFirstName [this value] (new-builder (assoc inst :firstName value)))
-      (setMiddleName [this value] (new-builder (assoc inst :middleName value)))
-      (setLastName [this value] (new-builder (assoc inst :lastName value)))
-      (build [this] (type-instance jdata.examples.Name inst)))))
+  (letfn [(builder [inst]
+            (reify jdata.examples.NameBuilder
+              (setFirstName [this value] (builder (assoc inst :firstName value)))
+              (setMiddleName [this value] (builder (assoc inst :middleName value)))
+              (setLastName [this value] (builder (assoc inst :lastName value)))
+              (build [this] (type-instance jdata.examples.Name (map->Name inst)))))]
+    (builder {})))
 
 (defn -main []
   (println (macroexpand-1 '(defdom
@@ -164,7 +165,7 @@
     (println (type kjetil))
     (println (. kjetil getFirstName))
     (println (:firstName kjetil))
-    (let [nb ((name-builder) {})
+    (let [nb (name-builder)
           n1 (. (. (. nb setFirstName "Kjetil") setLastName "V") build)
           n2 (. (. (. nb setFirstName "Thomas") setLastName "J") build)]
       (println (type n1))
