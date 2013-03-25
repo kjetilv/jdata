@@ -119,22 +119,21 @@
   (let [builder-class (eval builder-class-symbol)
         target-class (built-class builder-class)
         target-class-symbol (symbol (. target-class getName))
-        set-meth-attrs (seq (method-attributes builder-class))
-        instance (gensym)
-        set-method (fn [[methodName attrName]]
-                     (let [this (gensym) 
-                           value (gensym)]
-                       `(~(symbol methodName) [~this ~value] 
-                          (do 
-                            (def ~instance (assoc ~instance ~(keyword attrName) ~value))
-                            ~this))))
-        set-methods (map set-method set-meth-attrs)
+        inst (gensym)
+        builder (gensym)
+        this (gensym)
+        value (gensym) 
+        set-method-attrs (seq (method-attributes builder-class))
+        set-method-maker (fn [[method-name keyword-field]]
+                           (let [method-symbol (symbol method-name) 
+                                 field-keyword (keyword (symbol keyword-field))]
+                             `(~method-symbol [~this ~value] (~builder (assoc ~inst ~field-keyword ~value)))))
         mapctr (symbol (str "map->" (. target-class getSimpleName)))]
-    `(fn [~instance]  
-       (reify ~builder-class-symbol
-         ~@set-methods
-         (toString [this] (. ~instance toString))
-         (build [this] (type-instance ~target-class-symbol ~instance))))))
+    `(letfn [(~builder [~inst]
+               (reify ~builder-class-symbol
+                 ~@(map set-method-maker set-method-attrs)
+                 (build [this] (type-instance ~target-class-symbol (~mapctr ~inst)))))]
+       (~builder {}))))
 
 (defn name-builder []
   (letfn [(builder [inst]
@@ -150,14 +149,14 @@
                              jdata.examples.PersonBuilder
                              jdata.examples.NameBuilder
                              jdata.examples.AddressBuilder)))
-  (println (map->Person {}))
-  (println (macroexpand-1 '(builder jdata.examples.PersonBuilder)))
-  (let [person (new Person
-                 (new Name "Kjetil" nil "Valstadsve")
-                 (new Address "Nonnegata" "21" "0656" "Oslo"))]
-    (println person))
-  (println (macroexpand-1 '(defbuilder jdata.examples.NameBuilder)))
-  (let [kjetil (build (defbuilder jdata.examples.NameBuilder)
+;  (println (map->Person {}))
+;  (println (macroexpand-1 '(builder jdata.examples.PersonBuilder)))
+;  (let [person (new Person
+;                 (new Name "Kjetil" nil "Valstadsve")
+;                 (new Address "Nonnegata" "21" "0656" "Oslo"))]
+;    (println person))
+  (println (macroexpand-1 '(type-builder jdata.examples.NameBuilder)))
+  (let [kjetil (build (type-builder jdata.examples.NameBuilder)
                  [firstName "Kjetil"
                   middleName "Jamne"
                   lastName "Valstadsve"])]
@@ -165,7 +164,7 @@
     (println (type kjetil))
     (println (. kjetil getFirstName))
     (println (:firstName kjetil))
-    (let [nb (name-builder)
+    (let [nb (type-builder jdata.examples.NameBuilder) 
           n1 (. (. (. nb setFirstName "Kjetil") setLastName "V") build)
           n2 (. (. (. nb setFirstName "Thomas") setLastName "J") build)]
       (println (type n1))
