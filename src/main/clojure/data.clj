@@ -88,27 +88,6 @@
        (get [this] ~type-instance)
        (toString [this] (. ~type-instance toString)))))
 
-(defmacro type-builder [builder-class-symbol]
-  (let [builder-class (eval builder-class-symbol)
-        target-class (built-class builder-class)
-        target-class-symbol (symbol (. target-class getName))
-        set-meth-attrs (seq (method-attributes builder-class))
-        instance (gensym)
-        set-method (fn [[methodName attrName]]
-                     (let [this (gensym) 
-                           value (gensym)]
-                       `(~(symbol methodName) [~this ~value] 
-                          (do 
-                            (def ~instance (assoc ~instance ~(keyword attrName) ~value))
-                            ~this))))
-        set-methods (map set-method set-meth-attrs)
-        mapctr (symbol (str "map->" (. target-class getSimpleName)))]
-    `(fn [~instance]  
-       (reify ~builder-class-symbol
-         ~@set-methods
-         (toString [this] (. ~instance toString))
-         (build [this] (type-instance ~target-class-symbol ~instance))))))
-
 (defmacro defdom [& names]
   (letfn [(declared-fields-vector [intf]
             (apply vector (map symbol (vals (method-attributes intf)))))
@@ -135,6 +114,27 @@
   jdata.examples.PersonBuilder
   jdata.examples.NameBuilder
   jdata.examples.AddressBuilder)
+
+(defmacro type-builder [builder-class-symbol]
+  (let [builder-class (eval builder-class-symbol)
+        target-class (built-class builder-class)
+        target-class-symbol (symbol (. target-class getName))
+        set-meth-attrs (seq (method-attributes builder-class))
+        instance (gensym)
+        set-method (fn [[methodName attrName]]
+                     (let [this (gensym) 
+                           value (gensym)]
+                       `(~(symbol methodName) [~this ~value] 
+                          (do 
+                            (def ~instance (assoc ~instance ~(keyword attrName) ~value))
+                            ~this))))
+        set-methods (map set-method set-meth-attrs)
+        mapctr (symbol (str "map->" (. target-class getSimpleName)))]
+    `(fn [~instance]  
+       (reify ~builder-class-symbol
+         ~@set-methods
+         (toString [this] (. ~instance toString))
+         (build [this] (type-instance ~target-class-symbol ~instance))))))
 
 (defn name-builder []
   (defn new-builder [inst]
