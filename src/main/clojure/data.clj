@@ -79,13 +79,17 @@
   jdata.examples.NameBuilder
   jdata.examples.AddressBuilder)
 
-(defn builders []
-  (let [m { jdata.examples.NameBuilder (type-builder jdata.examples.NameBuilder)
-            jdata.examples.AddressBuilder (type-builder jdata.examples.AddressBuilder)
-            jdata.examples.PersonBuilder (type-builder jdata.examples.PersonBuilder)}]
+(defmacro builders [& builder-symbols]
+  (let [ms (letfn [(append-symbols [list s] 
+                     (conj list s `(type-builder ~s)))]
+             (reverse (reduce append-symbols (list) builder-symbols)))
+        m (gensym)
+        this (gensym)
+        class-object (gensym)]
+    `(let [~m { ~@ms ~@ms }]
     (reify jdata.core.Builders
-      (getBuilder [this class-object]
-        (get m class-object)))))
+      (getBuilder [~this ~class-object]
+        (get ~m ~class-object))))))
           
 (defn -main []
   (println (macroexpand-1 '(defdom
@@ -114,14 +118,14 @@
       (println (type n2))
       (println (. n1 getFirstName))
       (println (. n1 get)))
-;  (println (macroexpand-1 '(builders
-;                             jdata.examples.PersonBuilder
-;                             jdata.examples.NameBuilder
-;                             jdata.examples.AddressBuilder))))
-    (let [bs (builders)]
-;               jdata.examples.PersonBuilder
-;               jdata.examples.NameBuilder
-;               jdata.examples.AddressBuilder)]
+  (println (macroexpand-1 '(builders
+                             jdata.examples.PersonBuilder
+                             jdata.examples.NameBuilder
+                             jdata.examples.AddressBuilder)))
+    (let [bs (builders
+               jdata.examples.PersonBuilder
+               jdata.examples.NameBuilder
+               jdata.examples.AddressBuilder)]
       (println (. bs getBuilder jdata.examples.NameBuilder)))))
 
 (-main)
