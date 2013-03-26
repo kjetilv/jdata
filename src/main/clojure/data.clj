@@ -20,18 +20,6 @@
                                            attribute-names (map normalize accessed-names)]
                                        (zipmap method-names attribute-names))))))
 
-(defmacro type-instance [type-name type-instance]
-  (let [target-class (eval type-name)
-        get-meth-attrs (seq (-method-attributes target-class))
-        get-method (fn [[methodName attrName]]
-                     (let [this (gensym)]
-                       `(~(symbol methodName) [~this]
-                          (~(keyword attrName) ~type-instance))))
-        get-methods (map get-method get-meth-attrs)]
-    `(reify ~type-name
-       ~@get-methods
-       (get [this] ~type-instance))))
-
 (defmacro defdom [& names]
   (letfn [(declared-fields-vector [intf]
             (apply vector (map symbol (vals (-method-attributes intf)))))
@@ -53,6 +41,18 @@
     `(do
        ~@(map to-call (partition 2 methodCalls))
        (. ~builder build))))
+
+(defmacro type-instance [type-name type-instance]
+  (let [target-class (eval type-name)
+        get-meth-attrs (seq (-method-attributes target-class))
+        get-method (fn [[methodName attrName]]
+                     (let [this (gensym)]
+                       `(~(symbol methodName) [~this]
+                          (~(keyword attrName) ~type-instance))))
+        get-methods (map get-method get-meth-attrs)]
+    `(reify ~type-name
+       ~@get-methods
+       (get [this] ~type-instance))))
 
 (defmacro type-builder [builder-class-symbol]
   (let [builder-class (eval builder-class-symbol)
@@ -87,10 +87,10 @@
         this (gensym)
         class-object (gensym)]
     `(let [~m { ~@ms ~@ms }]
-    (reify jdata.core.Builders
-      (getBuilder [~this ~class-object]
-        (get ~m ~class-object))))))
-          
+       (reify jdata.core.Builders
+         (getBuilder [~this ~class-object]
+           (get ~m ~class-object))))))
+
 (defn -main []
   (println (macroexpand-1 '(defdom
                              jdata.examples.PersonBuilder
