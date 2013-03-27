@@ -1,24 +1,27 @@
 (ns data
   (:require [clojure.string :as str]))
 
-(def -built-class (memoize (fn [builder-class]
-                             (first (. (first (. builder-class getGenericInterfaces)) getActualTypeArguments)))))
+(defmacro defn-memoized [fn-name args & body]
+  `(def ~fn-name (memoize (fn ~args ~@body))))
 
-(def -method-attributes (memoize (fn [clazz]
-                                   (letfn [(bean-name [name]
-                                             (letfn [(prefixed? [pref] (. name startsWith pref))]
-                                               (cond
-                                                 (prefixed? "is") (. name substring 2)
-                                                 (prefixed? "get") (. name substring 3)
-                                                 (prefixed? "set") (. name substring 3)
-                                                 :else nil)))
-                                           (normalize [name]
-                                             (. java.beans.Introspector decapitalize name))]
-                                     (let [methods (. clazz getDeclaredMethods)
-                                           method-names (map #(. %1 getName) methods)
-                                           accessed-names (remove nil? (map bean-name method-names))
-                                           attribute-names (map normalize accessed-names)]
-                                       (zipmap method-names attribute-names))))))
+(defn-memoized -built-class [builder-class]
+  (first (. (first (. builder-class getGenericInterfaces)) getActualTypeArguments)))
+
+(defn-memoized -method-attributes [clazz]
+  (letfn [(bean-name [name]
+            (letfn [(prefixed? [pref] (. name startsWith pref))]
+              (cond
+                (prefixed? "is") (. name substring 2)
+                (prefixed? "get") (. name substring 3)
+                (prefixed? "set") (. name substring 3)
+                :else nil)))
+          (normalize [name]
+            (. java.beans.Introspector decapitalize name))]
+    (let [methods (. clazz getDeclaredMethods)
+          method-names (map #(. %1 getName) methods)
+          accessed-names (remove nil? (map bean-name method-names))
+          attribute-names (map normalize accessed-names)]
+      (zipmap method-names attribute-names))))
 
 (defmacro defdom [& names]
   (letfn [(declared-fields-vector [intf]
@@ -44,11 +47,10 @@
 
 (defmacro type-instance [type-name type-instance]
   (let [target-class (eval type-name)
-        get-meth-attrs (seq (-method-attributes target-class))
+        get-meth-attrs (-method-attributes target-class)
         get-method (fn [[methodName attrName]]
                      (let [this (gensym)]
-                       `(~(symbol methodName) [~this]
-                          (~(keyword attrName) ~type-instance))))
+                       `(~(symbol methodName) [~this] (~(keyword attrName) ~type-instance))))
         get-methods (map get-method get-meth-attrs)]
     `(reify ~type-name
        ~@get-methods
@@ -56,21 +58,22 @@
 
 (defmacro type-builder [builder-class-symbol]
   (let [builder-class (eval builder-class-symbol)
-        target-class (-built-class builder-class)
-        target-class-symbol (symbol (. target-class getName))
         inst (gensym)
         builder (gensym)
         this (gensym)
         value (gensym)
-        set-method-attrs (seq (-method-attributes builder-class))
+        set-method-attrs (-method-attributes builder-class)
         set-method-maker (fn [[method-name keyword-field]]
                            (let [method-symbol (symbol method-name)
                                  field-keyword (keyword (symbol keyword-field))]
                              `(~method-symbol [~this ~value] (~builder (assoc ~inst ~field-keyword ~value)))))
+        set-methods (map set-method-maker set-method-attrs) 
+        target-class (-built-class builder-class)
+        target-class-symbol (symbol (. target-class getName))
         mapctr (symbol (str "map->" (. target-class getSimpleName)))]
     `(letfn [(~builder [~inst]
                (reify ~builder-class-symbol
-                 ~@(map set-method-maker set-method-attrs)
+                 ~@set-methods
                  (build [this] (type-instance ~target-class-symbol (~mapctr ~inst)))))]
        (~builder {}))))
 
