@@ -1,27 +1,30 @@
 package jdata.examples;
 
-import clojure.lang.Compiler;
-import clojure.lang.RT;
+import jdata.core.Builder;
+import jdata.core.Builders;
+import jdata.core.BuildersProvider;
 import org.junit.Test;
 
-import java.io.*;
-import java.nio.charset.Charset;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 public class DataTest {
     
-    @Test
+    @Test 
     public void newPerson() throws IOException, NoSuchFieldException {
-        System.out.println(RT.baseLoader());
-        File source = new File("src/main/clojure/data.clj");
-        Reader rdr = new InputStreamReader(new FileInputStream(source), Charset.forName("UTF-8"));
-        Object load;
-        try {
-            load = Compiler.load(rdr, "src/main/clojure/data.clj", "data.clj");
-        } finally {
-            rdr.close();
-        }
-        System.out.println(load);
+        BuildersProvider provider = new data.ClojureBuildersProvider();
+        System.out.println(provider);
+        List<Class<? extends Builder<?>>> classes = Arrays.asList
+                (NameBuilder.class, AddressBuilder.class, PersonBuilder.class);
         
+        Builders builders = provider.getBuilders(classes);
+        System.out.println("Provider: " + builders);
+
+        Builder<Name> builder = builders.getBuilder(Name.class);
+        System.out.println("NameBuilder: " + builder);
         
+        Name name = ((NameBuilder)builder).setFirstName("Kjetil").setLastName("V").build();
+        System.out.println("Name: " + name.get());
     }
 }
