@@ -48,16 +48,17 @@
        ~@(map to-call (partition 2 methodCalls))
        (. ~builder build))))
 
-(defmacro type-instance [type-name type-instance]
+(defmacro type-instance [type-name instance instance-map]
   (let [target-class (eval type-name)
         get-meth-attrs (-method-attributes target-class)
         get-method (fn [[methodName attrName]]
                      (let [this (gensym)]
-                       `(~(symbol methodName) [~this] (~(keyword attrName) ~type-instance))))
+                       `(~(symbol methodName) [~this] (~(keyword attrName) ~instance))))
         get-methods (map get-method get-meth-attrs)]
     `(reify ~type-name
        ~@get-methods
-       (get [this] ~type-instance))))
+       (toString [this] (str ~instance-map))
+       (get [this] ~instance))))
 
 (defmacro type-builder [builder]
   (let [builder-class (cond 
@@ -80,7 +81,8 @@
     `(letfn [(~builder [~inst]
                (reify ~builder-class-symbol
                  ~@set-methods
-                 (build [this] (type-instance ~target-class-symbol (~mapctr ~inst)))))]
+                 (toString [this] (str (assoc ~inst :builder ~target-class-symbol)))
+                 (build [this] (type-instance ~target-class-symbol (~mapctr ~inst) ~inst))))]
        (~builder {}))))
 
 ;(defdom
@@ -90,7 +92,7 @@
 
 (defmacro builders [& builder-symbols]
   (let [ms (letfn [(append-symbols [list s]
-                     (conj list (-built-class (. Class forName (str s))) `(type-builder ~s)))]
+                     (conj list s `(type-builder ~s)))]
              (reverse (reduce append-symbols (list) builder-symbols)))
         m (gensym)
         this (gensym)
@@ -98,7 +100,6 @@
     `(let [~m { ~@ms ~@ms }]
        (reify jdata.core.Builders
          (getBuilder [~this ~class-object]
-           (println ~m ~class-object)
            (get ~m ~class-object))))))
 
 (defn -getBuilders [this classes]

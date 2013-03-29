@@ -21,10 +21,12 @@ public class DataTest {
         Builders builders = provider.getBuilders(classes);
         System.out.println("Provider: " + builders);
 
-        Builder<Name> builder = builders.getBuilder(Name.class);
-        System.out.println("NameBuilder: " + builder);
+        NameBuilder builder = builders.getBuilder(NameBuilder.class);
+        System.out.println("NameBuilder: " + builder.setMiddleName("Invalid"));
         
-        Name name = ((NameBuilder)builder).setFirstName("Kjetil").setLastName("V").build();
-        System.out.println("Name: " + name.get());
+        Name name = builder.setFirstName("Kjetil").setLastName("V").build();
+        System.out.println("Name: " + name);
+        System.out.println(" First name : " + name.getFirstName());
+        System.out.println("  Last name : " + name.getLastName());
     }
 }
