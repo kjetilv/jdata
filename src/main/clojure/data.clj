@@ -104,8 +104,8 @@
 
 (defn -getBuilders [this classes]
   (let [symbols (map symbol (map (fn [cl] (. cl getName)) (seq classes)))
-        defdom-forms (concat (list 'data/defdom) symbols)
-        builders-form (concat (list 'data/builders) symbols)]
+        defdom-forms (cons 'data/defdom symbols)
+        builders-form (cons 'data/builders symbols)]
     (eval defdom-forms)
     (eval builders-form)))
 
